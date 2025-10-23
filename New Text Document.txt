@@ -1,0 +1,29 @@
+Task 1
+
+like    2
+pig     3
+hive    2
+
+Task 2
+
+like    pig     2
+like    like    2
+like    hive    2
+pig     like    2
+pig     hive    3
+pig     pig     2
+hive    like    2
+hive    pig     3
+
+Task 3
+
+like    pig     2
+like    like    2
+like    hive    2
+pig     like    2
+pig     hive    3
+pig     pig     2
+hive    like    2
+hive    pig     3
+For the first batch, Task 3’s output will be identical to Task 2
+If you later add the same file again, every count doubles , since it accumulates state.
