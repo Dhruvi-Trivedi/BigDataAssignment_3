@@ -4,6 +4,8 @@ import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.streaming.dstream.DStream
 
+import scala.collection.Seq
+
 object a3 {
   def main(args: Array[String]): Unit = {
     if (args.length != 2) {
@@ -13,7 +15,7 @@ object a3 {
 
     val inputDir = args(0)
     val outputDir = args(1)
-    
+
     val checkpointDir = "/s4146514/checkpoint"
 
     val conf = new SparkConf().setAppName("A3-Streaming")
@@ -24,7 +26,7 @@ object a3 {
 
     val lines = ssc.textFileStream(inputDir)
 
-    // Atomic counters to produce unique 3-digit suffixes 
+    // Atomic counters to produce unique 3-digit suffixes
     val task1Seq = new java.util.concurrent.atomic.AtomicInteger(1)
     val task2Seq = new java.util.concurrent.atomic.AtomicInteger(1)
     val task3Seq = new java.util.concurrent.atomic.AtomicInteger(1)
@@ -37,7 +39,7 @@ object a3 {
         .filter(w => w.matches("^[A-Za-z]+$") && w.length >= 3)
     }
 
-    // Task 1 
+    // Task 1
     // For each RDD of DStream, count word frequency and save to HDFS
     val wordsDStream: DStream[String] = lines.flatMap(preprocess)
 
@@ -51,7 +53,7 @@ object a3 {
       }
     }
 
-    // Task 2 
+    // Task 2
     // For each RDD, generate ordered co-occurrence pairs (i != j) and count within the RDD (batch)
     val pairsPerLine: DStream[(String, Int)] = lines.flatMap { line =>
       val ws = preprocess(line)
@@ -76,7 +78,7 @@ object a3 {
       }
     }
 
-    // Task 3 
+    // Task 3
     // Continuously accumulate co-occurrence frequency of word pairs using updateStateByKey
     // (UG requirement: output the accumulated co-occurrence frequencies every 3-second interval)
 
