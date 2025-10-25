@@ -84,22 +84,33 @@ object a3 {
     }
 
     // Task 3:accumulate co-occurrence frequency across all batches
+    val updateFunc = (newValues: Seq[Int], runningCount: Option[Int]) => {
+      Some(runningCount.getOrElse(0) + newValues.sum)
+    }
+
+    // Apply updateStateByKey to accumulate co-occurrence frequencies
     val stateStream = pairStream.updateStateByKey[Int](updateFunc)
 
     // Only output when new data arrives
     pairStream.foreachRDD { currentRDD =>
       if (!currentRDD.isEmpty()) {
-        stateStream.foreachRDD { rdd =>
+        stateStream.foreachRDD { (rdd, time) =>
           if (!rdd.isEmpty()) {
-            val output = rdd.map { case (pair, c) => s"$pair\t$c" }
-            val seq = task3Seq.getAndIncrement()
-            val path = f"$outputDir/task3-$seq%03d"
+            val batchID = time.milliseconds / 1000
+            val formatted = f"$batchID%03d"
+            val path = s"$outputDir/task3-$formatted"
             println(s"Saving Task 3 output to $path (new data arrived)")
+            val output = rdd.map { case (pair, c) => s"$pair\t$c" }
             output.saveAsTextFile(path)
+          } else {
+            println("State RDD is empty – no output for this batch.")
           }
         }
+      } else {
+        println("No new files – skipping Task 3 output.")
       }
     }
+
 
     println("Streaming job started... waiting for new data in HDFS input directory.")
     ssc.start()
