@@ -59,7 +59,7 @@ object a3 {
     }
 
     // Task 2: count co-occurrence frequency per batch
-    val pairStream: DStream[(String, Int)] = lines.flatMap { line =>
+    val pairStream: DStream[((String, String), Int)] = lines.flatMap { line =>
       val words = preprocess(line)
       val n = words.length
       if (n <= 1) Seq.empty
@@ -68,23 +68,23 @@ object a3 {
           i <- 0 until n
           j <- 0 until n
           if i != j
-        } yield (s"${words(i)}\t${words(j)}", 1)
+        } yield ((words(i), words(j)), 1)  // yield tuple (w1, w2) as key
       }
     }
 
     pairStream.foreachRDD { rdd =>
       if (!rdd.isEmpty()) {
-        val counts = rdd.reduceByKey(_ + _)
-        val output = counts.map { case (pair, c) => s"$pair\t$c" }
+        val counts = rdd.reduceByKey(_ + _)  // count co-occurrences
         val seq = task2Seq.getAndIncrement()
         val path = f"$outputDir/task2-$seq%03d"
         println(s"Saving Task-2 output to $path")
+        // format output as "w1 w2 count"
+        val output = counts.map { case ((w1, w2), c) => s"$w1 $w2 $c" }
         output.saveAsTextFile(path)
       }
     }
 
     // Task 3:accumulate co-occurrence frequency across all batches
-<<<<<<< HEAD:a3.scala
     val updateFunc = (newValues: Seq[Int], prevState: Option[Int]) => {
       val newSum = newValues.sum + prevState.getOrElse(0)
       Some(newSum)
@@ -99,35 +99,8 @@ object a3 {
         val path = f"$outputDir/task3-$seq%03d"
         println(s"Saving Task-3 output to $path")
         output.saveAsTextFile(path)
-=======
-    val updateFunc = (newValues: Seq[Int], runningCount: Option[Int]) => {
-      Some(runningCount.getOrElse(0) + newValues.sum)
-    }
-
-    // Apply updateStateByKey to accumulate co-occurrence frequencies
-    val stateStream = pairStream.updateStateByKey[Int](updateFunc)
-
-    // Only output when new data arrives
-    pairStream.foreachRDD { currentRDD =>
-      if (!currentRDD.isEmpty()) {
-        stateStream.foreachRDD { (rdd, time) =>
-          if (!rdd.isEmpty()) {
-            val batchID = time.milliseconds / 1000
-            val formatted = f"$batchID%03d"
-            val path = s"$outputDir/task3-$formatted"
-            println(s"Saving Task 3 output to $path (new data arrived)")
-            val output = rdd.map { case (pair, c) => s"$pair\t$c" }
-            output.saveAsTextFile(path)
-          } else {
-            println("State RDD is empty – no output for this batch.")
-          }
-        }
-      } else {
-        println("No new files – skipping Task 3 output.")
->>>>>>> ea32b0fd7f525f15aaa623a6fa4255b4a11d1d73:a3/src/main/scala/streaming/a3.scala
       }
     }
-
 
     println("Streaming job started... waiting for new data in HDFS input directory.")
     ssc.start()
