@@ -84,20 +84,20 @@ object a3 {
     }
 
     // Task 3:accumulate co-occurrence frequency across all batches
+    val updateFunc = (newValues: Seq[Int], prevState: Option[Int]) => {
+      val newSum = newValues.sum + prevState.getOrElse(0)
+      Some(newSum)
+    }
+
     val stateStream = pairStream.updateStateByKey[Int](updateFunc)
 
-    // Only output when new data arrives
-    pairStream.foreachRDD { currentRDD =>
-      if (!currentRDD.isEmpty()) {
-        stateStream.foreachRDD { rdd =>
-          if (!rdd.isEmpty()) {
-            val output = rdd.map { case (pair, c) => s"$pair\t$c" }
-            val seq = task3Seq.getAndIncrement()
-            val path = f"$outputDir/task3-$seq%03d"
-            println(s"Saving Task 3 output to $path (new data arrived)")
-            output.saveAsTextFile(path)
-          }
-        }
+    stateStream.foreachRDD { rdd =>
+      if (!rdd.isEmpty()) {
+        val output = rdd.map { case (pair, c) => s"$pair\t$c" }
+        val seq = task3Seq.getAndIncrement()
+        val path = f"$outputDir/task3-$seq%03d"
+        println(s"Saving Task-3 output to $path")
+        output.saveAsTextFile(path)
       }
     }
 
