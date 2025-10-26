@@ -68,21 +68,21 @@ object a3 {
           i <- 0 until n
           j <- 0 until n
           if i != j
-        } yield ((words(i), words(j)), 1)  // yield tuple (w1, w2) as key
+        } yield ((words(i), words(j)), 1) // key = (w1, w2), value = 1
       }
     }
 
     pairStream.foreachRDD { rdd =>
       if (!rdd.isEmpty()) {
-        val counts = rdd.reduceByKey(_ + _)  // count co-occurrences
+        val counts = rdd.reduceByKey(_ + _) // count co-occurrences
         val seq = task2Seq.getAndIncrement()
         val path = f"$outputDir/task2-$seq%03d"
         println(s"Saving Task-2 output to $path")
-        // format output as "w1 w2 count"
-        val output = counts.map { case ((w1, w2), c) => s"$w1 $w2 $c" }
-        output.saveAsTextFile(path)
+        // save as ((word1, word2), count)
+        counts.saveAsTextFile(path)
       }
     }
+
 
     // Task 3:accumulate co-occurrence frequency across all batches
     val updateFunc = (newValues: Seq[Int], prevState: Option[Int]) => {
